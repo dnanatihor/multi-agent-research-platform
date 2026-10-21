@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Multi-Agent Research</title>
+    <style>
+      :root { --ink: #1c1915; --paper: #f7f4ef; --accent: #0f4c45; }
+      body { margin: 0; background: var(--paper); color: var(--ink); font-family: Palatino, serif; }
+      main { max-width: 46rem; margin: 0 auto; padding: 16px; }
+      textarea, button { font: inherit; width: 100%; box-sizing: border-box; }
+      button { margin-top: 12px; background: var(--accent); color: #fff; border: 0; padding: 12px; }
+      button:focus, textarea:focus { outline: 3px solid #b45309; outline-offset: 2px; }
+      #out { white-space: pre-wrap; border: 1px solid #d9d1c5; padding: 12px; min-height: 10rem; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Multi-Agent Research</h1>
+      <label for="question">Question</label>
+      <textarea id="question" rows="3">How do transformers use attention during training?</textarea>
+      <button id="run" type="button">Write report</button>
+      <h2>Report</h2>
+      <div id="out" role="status" aria-live="polite"></div>
+    </main>
+    <script>
+      document.getElementById("run").addEventListener("click", async () => {
+        const out = document.getElementById("out");
+        const started = await fetch("/api/v1/reports", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ question: document.getElementById("question").value }),
+        });
+        let body = await started.json();
+        if (body.status === "awaiting_review") {
+          const notes = window.prompt("Review notes. Leave empty to approve.", "") || "";
+          const reviewed = await fetch("/api/v1/reports/" + body.reportId + "/review", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ decision: notes ? "revise" : "approve", notes: notes }),
+          });
+          body = await reviewed.json();
+        }
+        out.textContent = body.answer || body.draft || JSON.stringify(body, null, 2);
+      });
+    </script>
+  </body>
+</html>
